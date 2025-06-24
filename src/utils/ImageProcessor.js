@@ -182,7 +182,7 @@ const drawDefaultWatermark = (ctx, settings, exifData, totalWidth, totalHeight, 
 
     // 为NIKON logo添加特殊处理，默认放大到500%
     if (settings.selectedBrand === 'nikon') {
-      brandSpecificScale = 5.0; // 为NIKON logo默认放大到200%
+      brandSpecificScale = 5.0; // 为NIKON logo默认放大到500%
     }
     
     const scaledLogoHeight = baseLogoHeight * settings.logoSize * brandSpecificScale;
@@ -203,6 +203,8 @@ const drawDefaultWatermark = (ctx, settings, exifData, totalWidth, totalHeight, 
       img.src = logos.FUJI_LOGO;
     } else if (settings.selectedBrand === 'nikon') {
       img.src = logos.NIKON_LOGO;
+    } else if (settings.selectedBrand === 'gmaster') {
+      img.src = logos.GM_LOGO;
     } else {
       // 默认索尼logo
       img.src = logos.SONY_LOGO;
@@ -289,6 +291,8 @@ const drawDualLineWatermark = (ctx, settings, exifData, totalWidth, totalHeight,
     img.src = logos.FUJI_LOGO;
   } else if (settings.selectedBrand === 'nikon') {
     img.src = logos.NIKON_LOGO;
+  } else if (settings.selectedBrand === 'gmaster') {
+    img.src = logos.GM_LOGO;
   } else {
     // 默认索尼logo
     img.src = logos.SONY_LOGO;

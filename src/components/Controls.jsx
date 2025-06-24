@@ -116,7 +116,7 @@ function Controls({ settings, setSettings }) {
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">Brand Logo</label>
         <div className="flex gap-4">
-          {['sony', 'fuji', 'canon', 'nikon'].map((brand) => (
+          {['sony', 'fuji', 'canon', 'nikon', 'gmaster'].map((brand) => (
             <button
               key={brand}
               onClick={() => handleBrandChange(brand)}
