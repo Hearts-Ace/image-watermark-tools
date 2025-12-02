@@ -185,6 +185,11 @@ const drawDefaultWatermark = (ctx, settings, exifData, totalWidth, totalHeight, 
       brandSpecificScale = 5.0; // 为NIKON logo默认放大到500%
     }
     
+    // 为适马logo添加特殊处理，基础大小提高200%（放大到300%）
+    if (settings.selectedBrand === 'sigma') {
+      brandSpecificScale = 3.0; // 为适马logo默认放大到300%
+    }
+    
     const scaledLogoHeight = baseLogoHeight * settings.logoSize * brandSpecificScale;
     
     // 确保logo不会超出底部边框
@@ -205,6 +210,8 @@ const drawDefaultWatermark = (ctx, settings, exifData, totalWidth, totalHeight, 
       img.src = logos.NIKON_LOGO;
     } else if (settings.selectedBrand === 'gmaster') {
       img.src = logos.GM_LOGO;
+    } else if (settings.selectedBrand === 'sigma') {
+      img.src = logos.SIGMA_LOGO;
     } else {
       // 默认索尼logo
       img.src = logos.SONY_LOGO;
@@ -277,7 +284,16 @@ const drawDualLineWatermark = (ctx, settings, exifData, totalWidth, totalHeight,
   // 绘制Logo（位于右侧文本的左侧）
   // 计算Logo尺寸和位置
   const logoBaseHeight = Math.max(24, Math.min(32, totalWidth / 50));
-  const logoHeight = logoBaseHeight * settings.logoSize;
+  
+  // 应用品牌特定的缩放比例
+  let brandSpecificScale = 1.0;
+  
+  // 为适马logo添加特殊处理，基础大小提高200%（放大到300%）
+  if (settings.selectedBrand === 'sigma') {
+    brandSpecificScale = 3.0; // 为适马logo默认放大到300%
+  }
+  
+  const logoHeight = logoBaseHeight * settings.logoSize * brandSpecificScale;
   
   // 计算Logo垂直居中位置
   const logoY = totalHeight - effectiveBottomBorder + (effectiveBottomBorder - logoHeight) / 2;
@@ -293,6 +309,8 @@ const drawDualLineWatermark = (ctx, settings, exifData, totalWidth, totalHeight,
     img.src = logos.NIKON_LOGO;
   } else if (settings.selectedBrand === 'gmaster') {
     img.src = logos.GM_LOGO;
+  } else if (settings.selectedBrand === 'sigma') {
+    img.src = logos.SIGMA_LOGO;
   } else {
     // 默认索尼logo
     img.src = logos.SONY_LOGO;
