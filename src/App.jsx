@@ -63,7 +63,12 @@ function App() {
     logoSize: cachedSettings?.logoSize ?? 1.0, // 默认logo大小比例，1.0表示标准大小
     textSize: cachedSettings?.textSize ?? 1.0, // 默认文字大小比例，1.0表示标准大小
     watermarkStyle: cachedSettings?.watermarkStyle ?? 'default', // 默认水印风格
-    rotationAngle: cachedSettings?.rotationAngle ?? 0 // 图片旋转角度
+    rotationAngle: cachedSettings?.rotationAngle ?? 0, // 图片旋转角度
+    showPhotoShadow: cachedSettings?.showPhotoShadow ?? true, // 是否显示照片阴影
+    showColorStrip: cachedSettings?.showColorStrip ?? false, // 是否显示色彩条
+    colorStripPosition: cachedSettings?.colorStripPosition ?? 'right', // 色彩条位置: left/right
+    colorStripLength: cachedSettings?.colorStripLength ?? 0.35, // 色彩条长度（占照片宽度比例）
+    colorStripTopOffset: cachedSettings?.colorStripTopOffset ?? 60 // 色彩条距顶部高度
   });
   const [exifData, setExifData] = useState(null);
   const canvasRef = useRef(null);
@@ -103,7 +108,12 @@ function App() {
         textSize: settingsToSave.textSize,
         watermarkStyle: settingsToSave.watermarkStyle, // 新增：保存水印风格到缓存
         customDate: settingsToSave.customDate, // 新增：保存自定义日期到缓存
-        rotationAngle: settingsToSave.rotationAngle // 保存旋转角度到缓存
+        rotationAngle: settingsToSave.rotationAngle, // 保存旋转角度到缓存
+        showPhotoShadow: settingsToSave.showPhotoShadow, // 保存照片阴影开关
+        showColorStrip: settingsToSave.showColorStrip, // 保存色彩条开关
+        colorStripPosition: settingsToSave.colorStripPosition, // 保存色彩条位置
+        colorStripLength: settingsToSave.colorStripLength, // 保存色彩条长度
+        colorStripTopOffset: settingsToSave.colorStripTopOffset // 保存色彩条顶部距离
       };
       localStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(settingsToCache));
     } catch (error) {
@@ -201,7 +211,7 @@ function App() {
 
   useEffect(() => {
     if (image && canvasRef.current) {
-      processImage(canvasRef.current, image, settings, exifData).then(() => {
+      processImage(canvasRef.current, image, settings, exifData, { mode: 'preview' }).then(() => {
         // Image processing complete
       }).catch(error => {
         console.error('Error processing image:', error);
@@ -215,7 +225,7 @@ function App() {
       const fileExtension = settings.imageFormat === 'jpeg' ? 'jpg' : 'png';
       link.download = `processed-image.${fileExtension}`;
       
-      processImage(canvasRef.current, image, settings, exifData).then(dataUrl => {
+      processImage(canvasRef.current, image, settings, exifData, { mode: 'export' }).then(dataUrl => {
         link.href = dataUrl;
         link.click();
       }).catch(error => {
@@ -269,6 +279,34 @@ function App() {
     setSettings(prev => ({
       ...prev,
       watermarkStyle: style
+    }));
+  };
+
+  const handleColorStripToggle = () => {
+    setSettings(prev => ({
+      ...prev,
+      showColorStrip: !prev.showColorStrip
+    }));
+  };
+
+  const handleColorStripPositionChange = (position) => {
+    setSettings(prev => ({
+      ...prev,
+      colorStripPosition: position
+    }));
+  };
+
+  const handleColorStripLengthChange = (length) => {
+    setSettings(prev => ({
+      ...prev,
+      colorStripLength: parseFloat(length)
+    }));
+  };
+
+  const handleColorStripTopOffsetChange = (offset) => {
+    setSettings(prev => ({
+      ...prev,
+      colorStripTopOffset: parseInt(offset, 10)
     }));
   };
 
@@ -393,7 +431,7 @@ function App() {
                             : 'bg-gray-200 text-gray-700'
                         }`}
                       >
-                        高 (2400px)
+                        高 (9000px)
                       </button>
                       <button
                         onClick={() => handleResolutionChange('medium')}
@@ -403,7 +441,7 @@ function App() {
                             : 'bg-gray-200 text-gray-700'
                         }`}
                       >
-                        中 (1800px)
+                        中 (5000px)
                       </button>
                       <button
                         onClick={() => handleResolutionChange('low')}
@@ -413,7 +451,7 @@ function App() {
                             : 'bg-gray-200 text-gray-700'
                         }`}
                       >
-                        低 (1200px)
+                        低 (3000px)
                       </button>
                     </div>
                   </div>
@@ -442,6 +480,82 @@ function App() {
                         JPEG (小尺寸)
                       </button>
                     </div>
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">色彩条</label>
+                    <div className="flex items-center gap-3 mb-2">
+                      <button
+                        onClick={handleColorStripToggle}
+                        className={`px-4 py-2 rounded text-sm ${
+                          settings.showColorStrip
+                            ? 'bg-blue-500 text-white'
+                            : 'bg-gray-200 text-gray-700'
+                        }`}
+                      >
+                        {settings.showColorStrip ? '已开启' : '已关闭'}
+                      </button>
+                      <span className="text-sm text-gray-500">从照片中部采样5个平均色</span>
+                    </div>
+
+                    {settings.showColorStrip && (
+                      <div>
+                        <div className="flex gap-2 mb-2">
+                          <button
+                            onClick={() => handleColorStripPositionChange('left')}
+                            className={`px-3 py-1 rounded text-sm ${
+                              settings.colorStripPosition === 'left'
+                                ? 'bg-blue-500 text-white'
+                                : 'bg-gray-200 text-gray-700'
+                            }`}
+                          >
+                            左上
+                          </button>
+                          <button
+                            onClick={() => handleColorStripPositionChange('right')}
+                            className={`px-3 py-1 rounded text-sm ${
+                              settings.colorStripPosition === 'right'
+                                ? 'bg-blue-500 text-white'
+                                : 'bg-gray-200 text-gray-700'
+                            }`}
+                          >
+                            右上
+                          </button>
+                        </div>
+
+                        <label className="block text-sm font-medium text-gray-700 mb-1">色彩条长度</label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="range"
+                            min="0.2"
+                            max="1"
+                            step="0.05"
+                            value={settings.colorStripLength}
+                            onChange={(e) => handleColorStripLengthChange(e.target.value)}
+                            className="w-full"
+                          />
+                          <span className="text-sm text-gray-500 min-w-[52px]">
+                            {Math.round(settings.colorStripLength * 100)}%
+                          </span>
+                        </div>
+
+                        <label className="block text-sm font-medium text-gray-700 mb-1 mt-2">距顶部高度</label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="range"
+                            min="0"
+                            max="300"
+                            step="1"
+                            value={settings.colorStripTopOffset}
+                            onChange={(e) => handleColorStripTopOffsetChange(e.target.value)}
+                            className="w-full"
+                          />
+                          <span className="text-sm text-gray-500 min-w-[52px]">
+                            {settings.colorStripTopOffset}px
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   
                   {settings.imageFormat === 'jpeg' && (

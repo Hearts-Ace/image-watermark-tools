@@ -126,6 +126,20 @@ function Controls({ settings, setSettings }) {
         <span className="text-sm text-gray-500">{settings.rotationAngle || 0}°</span>
       </div>
 
+      <div className="mb-6">
+        <label className="block text-sm font-medium text-gray-700 mb-2">照片阴影</label>
+        <button
+          onClick={() => setSettings(prev => ({ ...prev, showPhotoShadow: !prev.showPhotoShadow }))}
+          className={`px-4 py-2 rounded text-sm ${
+            settings.showPhotoShadow
+              ? 'bg-blue-500 text-white'
+              : 'bg-gray-200 text-gray-700'
+          }`}
+        >
+          {settings.showPhotoShadow ? '已开启' : '已关闭'}
+        </button>
+      </div>
+
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">Brand Logo</label>
         <div className="flex gap-4">

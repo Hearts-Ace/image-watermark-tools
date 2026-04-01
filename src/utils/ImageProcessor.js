@@ -1,9 +1,10 @@
 // src/utils/ImageProcessor.js
 import * as logos from './logos.js';
 
-const processImage = (canvas, image, settings, exifData) => {
+const processImage = (canvas, image, settings, exifData, options = {}) => {
   return new Promise((resolve) => {
     const ctx = canvas.getContext('2d');
+    const isPreview = options.mode === 'preview';
     
     // 获取设备像素比，以支持高分辨率显示器
     const devicePixelRatio = window.devicePixelRatio || 1;
@@ -12,26 +13,41 @@ const processImage = (canvas, image, settings, exifData) => {
     let maxWidth;
     switch (settings.outputResolution) {
       case 'original':
-        // 限制原始尺寸的最大宽度，避免图片过大
-        maxWidth = Math.min(image.width, 1800);
+        // 原始尺寸严格使用上传图片原生像素宽度
+        maxWidth = image.width;
         break;
       case 'high':
-        maxWidth = 1800;
+        maxWidth = 9000;
         break;
       case 'medium':
-        maxWidth = 1200;
+        maxWidth = 5000;
         break;
       case 'low':
-        maxWidth = 800;
+        maxWidth = 3000;
         break;
       default:
-        maxWidth = Math.min(image.width, 1800);
+        maxWidth = image.width;
+    }
+
+    // 预览模式使用轻量分辨率，避免实时调节时卡顿
+    if (isPreview) {
+      maxWidth = Math.min(maxWidth, 1800);
     }
     
     // Calculate dimensions - 使用选定的分辨率
     const aspectRatio = image.width / image.height;
     const width = Math.min(image.width, maxWidth);
     const height = width / aspectRatio;
+    const uiScale = Math.max(1, width / 1200);
+    const scaledSettings = {
+      ...settings,
+      topBorder: (settings.topBorder || 0) * uiScale,
+      rightBorder: (settings.rightBorder || 0) * uiScale,
+      bottomBorder: (settings.bottomBorder || 0) * uiScale,
+      leftBorder: (settings.leftBorder || 0) * uiScale,
+      borderRadius: (settings.borderRadius || 0) * uiScale,
+      colorStripTopOffset: (settings.colorStripTopOffset ?? settings.bottomBorder ?? 0) * uiScale
+    };
     const rotationAngle = settings.rotationAngle || 0;
     const rotationRadians = (rotationAngle * Math.PI) / 180;
 
@@ -42,8 +58,8 @@ const processImage = (canvas, image, settings, exifData) => {
     const rotatedHeight = width * absSin + height * absCos;
 
     // Set canvas size including borders
-    const totalWidth = rotatedWidth + settings.leftBorder + settings.rightBorder;
-    const totalHeight = rotatedHeight + settings.topBorder + settings.bottomBorder;
+    const totalWidth = rotatedWidth + scaledSettings.leftBorder + scaledSettings.rightBorder;
+    const totalHeight = rotatedHeight + scaledSettings.topBorder + scaledSettings.bottomBorder;
     
     // 设置canvas尺寸时考虑设备像素比，以支持高分辨率显示
     canvas.width = totalWidth * devicePixelRatio;
@@ -67,51 +83,63 @@ const processImage = (canvas, image, settings, exifData) => {
     ctx.fillStyle = 'white';
     ctx.fillRect(0, 0, totalWidth, totalHeight);
 
+    const radius = Math.min(
+      scaledSettings.borderRadius || 0,
+      scaledSettings.topBorder || 0,
+      scaledSettings.rightBorder || 0,
+      scaledSettings.bottomBorder || 0,
+      scaledSettings.leftBorder || 0
+    );
+
     // 旋转模式下按中心点绘制，使用外接矩形保证完整显示不裁切
     if (rotationAngle !== 0) {
-      const centerX = settings.leftBorder + rotatedWidth / 2;
-      const centerY = settings.topBorder + rotatedHeight / 2;
+      const centerX = scaledSettings.leftBorder + rotatedWidth / 2;
+      const centerY = scaledSettings.topBorder + rotatedHeight / 2;
+
+      if (settings.showPhotoShadow !== false) {
+        drawRotatedShadow(ctx, centerX, centerY, width, height, rotationRadians, uiScale);
+      }
+
       ctx.save();
       ctx.translate(centerX, centerY);
       ctx.rotate(rotationRadians);
       ctx.drawImage(image, -width / 2, -height / 2, width, height);
       ctx.restore();
-    } else if (settings.borderRadius > 0 &&
-        settings.topBorder > 0 && 
-        settings.rightBorder > 0 && 
-        settings.bottomBorder > 0 && 
-        settings.leftBorder > 0) {
+    } else if (scaledSettings.borderRadius > 0 &&
+        scaledSettings.topBorder > 0 && 
+        scaledSettings.rightBorder > 0 && 
+        scaledSettings.bottomBorder > 0 && 
+        scaledSettings.leftBorder > 0) {
       // Draw image with border radius
       ctx.save();
       ctx.beginPath();
-      const radius = Math.min(
-        settings.borderRadius,
-        settings.topBorder,
-        settings.rightBorder,
-        settings.bottomBorder,
-        settings.leftBorder
-      );
-      ctx.moveTo(settings.leftBorder + radius, settings.topBorder);
-      ctx.lineTo(settings.leftBorder + width - radius, settings.topBorder);
-      ctx.arcTo(settings.leftBorder + width, settings.topBorder, settings.leftBorder + width, settings.topBorder + radius, radius);
-      ctx.lineTo(settings.leftBorder + width, settings.topBorder + height - radius);
-      ctx.arcTo(settings.leftBorder + width, settings.topBorder + height, settings.leftBorder + width - radius, settings.topBorder + height, radius);
-      ctx.lineTo(settings.leftBorder + radius, settings.topBorder + height);
-      ctx.arcTo(settings.leftBorder, settings.topBorder + height, settings.leftBorder, settings.topBorder + height - radius, radius);
-      ctx.lineTo(settings.leftBorder, settings.topBorder + radius);
-      ctx.arcTo(settings.leftBorder, settings.topBorder, settings.leftBorder + radius, settings.topBorder, radius);
+      if (settings.showPhotoShadow !== false) {
+        drawRoundedRectShadow(ctx, scaledSettings.leftBorder, scaledSettings.topBorder, width, height, radius, uiScale);
+      }
+      ctx.moveTo(scaledSettings.leftBorder + radius, scaledSettings.topBorder);
+      ctx.lineTo(scaledSettings.leftBorder + width - radius, scaledSettings.topBorder);
+      ctx.arcTo(scaledSettings.leftBorder + width, scaledSettings.topBorder, scaledSettings.leftBorder + width, scaledSettings.topBorder + radius, radius);
+      ctx.lineTo(scaledSettings.leftBorder + width, scaledSettings.topBorder + height - radius);
+      ctx.arcTo(scaledSettings.leftBorder + width, scaledSettings.topBorder + height, scaledSettings.leftBorder + width - radius, scaledSettings.topBorder + height, radius);
+      ctx.lineTo(scaledSettings.leftBorder + radius, scaledSettings.topBorder + height);
+      ctx.arcTo(scaledSettings.leftBorder, scaledSettings.topBorder + height, scaledSettings.leftBorder, scaledSettings.topBorder + height - radius, radius);
+      ctx.lineTo(scaledSettings.leftBorder, scaledSettings.topBorder + radius);
+      ctx.arcTo(scaledSettings.leftBorder, scaledSettings.topBorder, scaledSettings.leftBorder + radius, scaledSettings.topBorder, radius);
       ctx.closePath();
       ctx.clip();
-      ctx.drawImage(image, settings.leftBorder, settings.topBorder, width, height);
+      ctx.drawImage(image, scaledSettings.leftBorder, scaledSettings.topBorder, width, height);
       ctx.restore();
     } else {
       // 如果边框宽度为0或圆角为0，直接绘制图像
-      ctx.drawImage(image, settings.leftBorder, settings.topBorder, width, height);
+      if (settings.showPhotoShadow !== false) {
+        drawRectShadow(ctx, scaledSettings.leftBorder, scaledSettings.topBorder, width, height, uiScale);
+      }
+      ctx.drawImage(image, scaledSettings.leftBorder, scaledSettings.topBorder, width, height);
     }
 
     // 确保底部边框至少有最小高度以容纳logo和文本信息
     const minBottomBorderForInfo = 30;
-    const effectiveBottomBorder = Math.max(settings.bottomBorder, 0);
+    const effectiveBottomBorder = Math.max(scaledSettings.bottomBorder, 0);
     
     // 只有当底部边框有高度时才绘制相机信息和logo
     if (effectiveBottomBorder > 0) {
@@ -120,15 +148,19 @@ const processImage = (canvas, image, settings, exifData) => {
         // 根据选择的水印风格应用不同的绘制方式
         if (settings.watermarkStyle === 'dualLine') {
           // 绘制双行对齐风格的水印
-          drawDualLineWatermark(ctx, settings, exifData, totalWidth, totalHeight, effectiveBottomBorder, watermarkResolve);
+          drawDualLineWatermark(ctx, scaledSettings, exifData, totalWidth, totalHeight, effectiveBottomBorder, watermarkResolve);
         } else {
           // 绘制默认风格的水印（原有逻辑）
-          drawDefaultWatermark(ctx, settings, exifData, totalWidth, totalHeight, effectiveBottomBorder, watermarkResolve);
+          drawDefaultWatermark(ctx, scaledSettings, exifData, totalWidth, totalHeight, effectiveBottomBorder, watermarkResolve);
         }
       });
       
       // 等待水印绘制完成后再导出图像
       drawWatermarkPromise.then(() => {
+        if (settings.showColorStrip) {
+          drawColorStrip(ctx, image, width, height, scaledSettings, rotatedWidth, effectiveBottomBorder);
+        }
+
         // 根据用户选择的格式和质量导出图像
         if (settings.imageFormat === 'jpeg') {
           resolve(canvas.toDataURL('image/jpeg', settings.imageQuality));
@@ -138,6 +170,10 @@ const processImage = (canvas, image, settings, exifData) => {
         }
       });
     } else {
+      if (settings.showColorStrip) {
+        drawColorStrip(ctx, image, width, height, scaledSettings, rotatedWidth, effectiveBottomBorder);
+      }
+
       // 如果没有底部边框，则直接导出图像
       if (settings.imageFormat === 'jpeg') {
         resolve(canvas.toDataURL('image/jpeg', settings.imageQuality));
@@ -148,13 +184,135 @@ const processImage = (canvas, image, settings, exifData) => {
   });
 };
 
+const applySoftShadow = (ctx, scale = 1) => {
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.18)';
+  ctx.shadowBlur = 12 * scale;
+  ctx.shadowOffsetX = 6 * scale;
+  ctx.shadowOffsetY = 6 * scale;
+};
+
+const drawRectShadow = (ctx, x, y, width, height, scale = 1) => {
+  ctx.save();
+  applySoftShadow(ctx, scale);
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.01)';
+  ctx.fillRect(x, y, width, height);
+  ctx.restore();
+};
+
+const drawRoundedRectShadow = (ctx, x, y, width, height, radius, scale = 1) => {
+  ctx.save();
+  applySoftShadow(ctx, scale);
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.01)';
+  roundedRectPath(ctx, x, y, width, height, radius);
+  ctx.fill();
+  ctx.restore();
+};
+
+const drawRotatedShadow = (ctx, centerX, centerY, width, height, radians, scale = 1) => {
+  ctx.save();
+  applySoftShadow(ctx, scale);
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.01)';
+  ctx.translate(centerX, centerY);
+  ctx.rotate(radians);
+  ctx.fillRect(-width / 2, -height / 2, width, height);
+  ctx.restore();
+};
+
+const roundedRectPath = (ctx, x, y, width, height, radius) => {
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y);
+  ctx.arcTo(x + width, y, x + width, y + radius, radius);
+  ctx.lineTo(x + width, y + height - radius);
+  ctx.arcTo(x + width, y + height, x + width - radius, y + height, radius);
+  ctx.lineTo(x + radius, y + height);
+  ctx.arcTo(x, y + height, x, y + height - radius, radius);
+  ctx.lineTo(x, y + radius);
+  ctx.arcTo(x, y, x + radius, y, radius);
+  ctx.closePath();
+};
+
+const drawColorStrip = (ctx, image, displayWidth, displayHeight, settings, rotatedWidth, effectiveBottomBorder) => {
+  const sampleSize = 100;
+  const samples = 5;
+  const stripScale = Math.max(1, rotatedWidth / 1200);
+  const stripLengthRatio = clamp(settings.colorStripLength || 0.35, 0.2, 1);
+  const stripWidth = Math.max(100, rotatedWidth * stripLengthRatio);
+  const swatchWidth = stripWidth / samples;
+  const swatchHeight = 22 * stripScale;
+  const stripHeight = swatchHeight;
+
+  const colors = getMiddleBandAverageColors(image, displayWidth, displayHeight, sampleSize, samples);
+  if (!colors.length) return;
+
+  // 让色彩条和照片边缘对齐，而不是和画布边缘对齐
+  const photoLeft = settings.leftBorder;
+  const photoRight = settings.leftBorder + rotatedWidth;
+  const stripX = settings.colorStripPosition === 'left'
+    ? photoLeft
+    : photoRight - stripWidth;
+
+  // 顶部距离可调节，默认沿用底部边框高度语义
+  const topOffset = settings.colorStripTopOffset ?? effectiveBottomBorder;
+  const stripY = Math.max(0, topOffset);
+
+  ctx.save();
+  colors.forEach((color, index) => {
+    ctx.fillStyle = color;
+    ctx.fillRect(stripX + index * swatchWidth, stripY, swatchWidth, swatchHeight);
+  });
+  ctx.restore();
+};
+
+const getMiddleBandAverageColors = (image, width, height, sampleSize, sampleCount) => {
+  const offscreen = document.createElement('canvas');
+  offscreen.width = Math.max(1, Math.round(width));
+  offscreen.height = Math.max(1, Math.round(height));
+  const offCtx = offscreen.getContext('2d');
+  if (!offCtx) return [];
+
+  offCtx.imageSmoothingEnabled = true;
+  offCtx.imageSmoothingQuality = 'high';
+  offCtx.drawImage(image, 0, 0, offscreen.width, offscreen.height);
+
+  const colors = [];
+  const centerY = offscreen.height / 2;
+
+  for (let i = 0; i < sampleCount; i++) {
+    const centerX = ((i + 0.5) * offscreen.width) / sampleCount;
+    const x = clamp(Math.round(centerX - sampleSize / 2), 0, Math.max(0, offscreen.width - sampleSize));
+    const y = clamp(Math.round(centerY - sampleSize / 2), 0, Math.max(0, offscreen.height - sampleSize));
+    const w = Math.min(sampleSize, offscreen.width);
+    const h = Math.min(sampleSize, offscreen.height);
+    const imageData = offCtx.getImageData(x, y, w, h).data;
+
+    let r = 0;
+    let g = 0;
+    let b = 0;
+    const pixels = imageData.length / 4;
+    for (let p = 0; p < imageData.length; p += 4) {
+      r += imageData[p];
+      g += imageData[p + 1];
+      b += imageData[p + 2];
+    }
+
+    colors.push(`rgb(${Math.round(r / pixels)}, ${Math.round(g / pixels)}, ${Math.round(b / pixels)})`);
+  }
+
+  return colors;
+};
+
+const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+
 // 绘制默认风格的水印（单行居中）
 const drawDefaultWatermark = (ctx, settings, exifData, totalWidth, totalHeight, effectiveBottomBorder, resolveCallback) => {
   ctx.fillStyle = '#333';
+  const spacingScale = Math.max(1, totalWidth / 1200);
+  const textPadding = 10 * spacingScale;
   
   // 根据图片尺寸调整文字大小，确保在大图片上文字也足够大
   // 计算基础字体大小，然后应用用户设置的文字大小缩放比例
-  const baseFontSize = Math.max(14, Math.min(22, totalWidth / 50));
+  const baseFontSize = Math.max(14, totalWidth / 50);
   const adjustedFontSize = baseFontSize * (settings.textSize || 1.0); // 应用用户设置的文字大小比例
   ctx.font = `${adjustedFontSize}px Arial`;
   
@@ -170,9 +328,9 @@ const drawDefaultWatermark = (ctx, settings, exifData, totalWidth, totalHeight, 
   const model = settings.cameraModel || exifData?.Model || 'Unknown Camera';
   ctx.textAlign = 'left';
   if (settings.leftBorder > 0) {
-    ctx.fillText(model, settings.leftBorder + 10, textY);
+    ctx.fillText(model, settings.leftBorder + textPadding, textY);
   } else {
-    ctx.fillText(model, 10, textY);
+    ctx.fillText(model, textPadding, textY);
   }
   
   // Draw EXIF data (right) - 使用用户输入的相机参数
@@ -184,14 +342,14 @@ const drawDefaultWatermark = (ctx, settings, exifData, totalWidth, totalHeight, 
   const exifText = [focalLength, fNumber, shutterSpeed, iso].filter(Boolean).join(' | ');
   if (exifText) {
     ctx.textAlign = 'right';
-    ctx.fillText(exifText, totalWidth - settings.rightBorder - 10, textY);
+    ctx.fillText(exifText, totalWidth - settings.rightBorder - textPadding, textY);
   }
 
   // 只在底部边框足够高时绘制logo
   if (effectiveBottomBorder >= 20) {
     // 根据图片尺寸和底部边框高度调整logo尺寸
     // 更大的logo高度，确保在大图片上logo也清晰可见
-    const baseLogoHeight = Math.max(30, Math.min(40, totalWidth / 40));
+    const baseLogoHeight = Math.max(30, totalWidth / 40);
     
     // 应用用户设置的logo缩放比例
     let brandSpecificScale = 1.0;
@@ -209,7 +367,7 @@ const drawDefaultWatermark = (ctx, settings, exifData, totalWidth, totalHeight, 
     const scaledLogoHeight = baseLogoHeight * settings.logoSize * brandSpecificScale;
     
     // 确保logo不会超出底部边框
-    const logoHeight = Math.min(scaledLogoHeight, effectiveBottomBorder - 10);
+    const logoHeight = Math.min(scaledLogoHeight, effectiveBottomBorder - textPadding);
     
     // 计算logo的y坐标，使其垂直居中
     const logoY = totalHeight - effectiveBottomBorder + (effectiveBottomBorder - logoHeight) / 2;
@@ -260,9 +418,14 @@ const drawDefaultWatermark = (ctx, settings, exifData, totalWidth, totalHeight, 
 // 绘制双行对齐风格的水印
 const drawDualLineWatermark = (ctx, settings, exifData, totalWidth, totalHeight, effectiveBottomBorder, resolveCallback) => {
   ctx.fillStyle = '#333';
+  const spacingScale = Math.max(1, totalWidth / 1200);
+  const textPadding = 10 * spacingScale;
+  const logoTextGap = 55 * spacingScale;
+  const logoDividerGap = 25 * spacingScale;
+  const dividerTextGap = 20 * spacingScale;
   
   // 计算基础字体大小，然后应用用户设置的文字大小缩放比例
-  const baseFontSize = Math.max(14, Math.min(20, totalWidth / 60));
+  const baseFontSize = Math.max(14, totalWidth / 60);
   const adjustedFontSize = baseFontSize * (settings.textSize || 1.0);
   
   // 为标题设置稍大的字体
@@ -281,7 +444,7 @@ const drawDualLineWatermark = (ctx, settings, exifData, totalWidth, totalHeight,
   // 左侧文本 - 第一行（镜头名称）
   const lensName = settings.lensModel || (settings.focalLength ? `${settings.focalLength}mm` : 'Unknown Lens');
   ctx.textAlign = 'left';
-  const leftMargin = settings.leftBorder > 0 ? settings.leftBorder + 10 : 10;
+  const leftMargin = settings.leftBorder > 0 ? settings.leftBorder + textPadding : textPadding;
   ctx.fillText(lensName, leftMargin, textStartY);
   
   // 左侧文本 - 第二行（相机名称）
@@ -299,7 +462,7 @@ const drawDualLineWatermark = (ctx, settings, exifData, totalWidth, totalHeight,
   
   // 绘制Logo（位于右侧文本的左侧）
   // 计算Logo尺寸和位置
-  const logoBaseHeight = Math.max(24, Math.min(32, totalWidth / 50));
+  const logoBaseHeight = Math.max(24, totalWidth / 50);
   
   // 应用品牌特定的缩放比例
   let brandSpecificScale = 1.0;
@@ -362,11 +525,11 @@ const drawDualLineWatermark = (ctx, settings, exifData, totalWidth, totalHeight,
     const dateTextWidth = ctx.measureText(dateText).width;
     const rightTextMaxWidth = Math.max(settingsTextWidth, dateTextWidth);
     
-    const rightMargin = totalWidth - (settings.rightBorder > 0 ? settings.rightBorder + 10 : 10);
-    const logoX = rightMargin - rightTextMaxWidth - logoWidth - 55; // 增加了间距以腾出更多竖线空间
+    const rightMargin = totalWidth - (settings.rightBorder > 0 ? settings.rightBorder + textPadding : textPadding);
+    const logoX = rightMargin - rightTextMaxWidth - logoWidth - logoTextGap; // 增加了间距以腾出更多竖线空间
     
     // 计算分割线的位置（在logo右侧，右侧文本左侧）
-    const dividerX = logoX + logoWidth + 25; // 增加了logo右侧到竖线的间距
+    const dividerX = logoX + logoWidth + logoDividerGap; // 增加了logo右侧到竖线的间距
     const dividerStartY = textStartY - adjustedFontSize; // 分割线起始位置
     const dividerEndY = textStartY + lineHeight + subtitleFontSize/2; // 分割线结束位置
     
@@ -382,7 +545,7 @@ const drawDualLineWatermark = (ctx, settings, exifData, totalWidth, totalHeight,
     ctx.drawImage(img, logoX, logoY, logoWidth, logoHeight);
     
     // 重新绘制右侧文本，左对齐到竖线
-    const rightTextX = dividerX + 20; // 增加了竖线右侧到文本的间距
+    const rightTextX = dividerX + dividerTextGap; // 增加了竖线右侧到文本的间距
     
     // 第一行文本
     ctx.font = `bold ${titleFontSize}px Arial`;
