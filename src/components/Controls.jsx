@@ -112,6 +112,19 @@ function Controls({ settings, setSettings }) {
         />
         <span className="text-sm text-gray-500">{settings.borderRadius}px</span>
       </div>
+      
+      <div className="mb-6">
+        <label className="block text-sm font-medium text-gray-700">图片旋转</label>
+        <input
+          type="range"
+          min="-45"
+          max="45"
+          value={settings.rotationAngle || 0}
+          onChange={(e) => handleChange('rotationAngle', e.target.value)}
+          className="w-full"
+        />
+        <span className="text-sm text-gray-500">{settings.rotationAngle || 0}°</span>
+      </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">Brand Logo</label>

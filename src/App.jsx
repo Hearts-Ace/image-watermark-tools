@@ -4,8 +4,6 @@ import EXIF from 'exif-js';
 import Controls from './components/Controls';
 import WatermarkStyles from './components/WatermarkStyles';
 import BokehTest from './components/BokehTest';
-import DistortionTestGrid from './components/DistortionTestGrid';
-import StripeTestPattern from './components/StripeTestPattern';
 import processImage from './utils/ImageProcessor';
 
 // 相机信息缓存的localStorage键名
@@ -64,7 +62,8 @@ function App() {
     outputResolution: cachedSettings?.outputResolution ?? 'original', // 默认使用原始分辨率
     logoSize: cachedSettings?.logoSize ?? 1.0, // 默认logo大小比例，1.0表示标准大小
     textSize: cachedSettings?.textSize ?? 1.0, // 默认文字大小比例，1.0表示标准大小
-    watermarkStyle: cachedSettings?.watermarkStyle ?? 'default' // 默认水印风格
+    watermarkStyle: cachedSettings?.watermarkStyle ?? 'default', // 默认水印风格
+    rotationAngle: cachedSettings?.rotationAngle ?? 0 // 图片旋转角度
   });
   const [exifData, setExifData] = useState(null);
   const canvasRef = useRef(null);
@@ -103,7 +102,8 @@ function App() {
         logoSize: settingsToSave.logoSize,
         textSize: settingsToSave.textSize,
         watermarkStyle: settingsToSave.watermarkStyle, // 新增：保存水印风格到缓存
-        customDate: settingsToSave.customDate // 新增：保存自定义日期到缓存
+        customDate: settingsToSave.customDate, // 新增：保存自定义日期到缓存
+        rotationAngle: settingsToSave.rotationAngle // 保存旋转角度到缓存
       };
       localStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(settingsToCache));
     } catch (error) {
@@ -285,16 +285,6 @@ function App() {
     return <BokehTest onExit={() => setCurrentPage('editor')} />;
   }
 
-  // 如果当前页面是畸变检测，直接渲染DistortionTestGrid组件
-  if (currentPage === 'distortion') {
-    return <DistortionTestGrid onExit={() => setCurrentPage('editor')} />;
-  }
-
-  // 如果当前页面是条纹测试，直接渲染StripeTestPattern组件
-  if (currentPage === 'stripe') {
-    return <StripeTestPattern onExit={() => setCurrentPage('editor')} />;
-  }
-
   return (
     <div className="min-h-screen bg-gray-100 p-8">
       <div className="max-w-7xl mx-auto">
@@ -320,26 +310,6 @@ function App() {
               }`}
             >
               镜头焦外测试
-            </button>
-            <button
-              onClick={() => setCurrentPage('distortion')}
-              className={`px-4 py-2 rounded transition-colors ${
-                currentPage === 'distortion'
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-white text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              镜头畸变检测
-            </button>
-            <button
-              onClick={() => setCurrentPage('stripe')}
-              className={`px-4 py-2 rounded transition-colors ${
-                currentPage === 'stripe'
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-white text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              歪光轴检测
             </button>
           </nav>
         </div>

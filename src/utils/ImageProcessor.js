@@ -32,10 +32,18 @@ const processImage = (canvas, image, settings, exifData) => {
     const aspectRatio = image.width / image.height;
     const width = Math.min(image.width, maxWidth);
     const height = width / aspectRatio;
+    const rotationAngle = settings.rotationAngle || 0;
+    const rotationRadians = (rotationAngle * Math.PI) / 180;
+
+    // 旋转后外接矩形尺寸，确保图片不被裁切
+    const absCos = Math.abs(Math.cos(rotationRadians));
+    const absSin = Math.abs(Math.sin(rotationRadians));
+    const rotatedWidth = width * absCos + height * absSin;
+    const rotatedHeight = width * absSin + height * absCos;
 
     // Set canvas size including borders
-    const totalWidth = width + settings.leftBorder + settings.rightBorder;
-    const totalHeight = height + settings.topBorder + settings.bottomBorder;
+    const totalWidth = rotatedWidth + settings.leftBorder + settings.rightBorder;
+    const totalHeight = rotatedHeight + settings.topBorder + settings.bottomBorder;
     
     // 设置canvas尺寸时考虑设备像素比，以支持高分辨率显示
     canvas.width = totalWidth * devicePixelRatio;
@@ -59,8 +67,16 @@ const processImage = (canvas, image, settings, exifData) => {
     ctx.fillStyle = 'white';
     ctx.fillRect(0, 0, totalWidth, totalHeight);
 
-    // 只有在边框半径大于0且所有边框都大于0时才应用圆角
-    if (settings.borderRadius > 0 && 
+    // 旋转模式下按中心点绘制，使用外接矩形保证完整显示不裁切
+    if (rotationAngle !== 0) {
+      const centerX = settings.leftBorder + rotatedWidth / 2;
+      const centerY = settings.topBorder + rotatedHeight / 2;
+      ctx.save();
+      ctx.translate(centerX, centerY);
+      ctx.rotate(rotationRadians);
+      ctx.drawImage(image, -width / 2, -height / 2, width, height);
+      ctx.restore();
+    } else if (settings.borderRadius > 0 &&
         settings.topBorder > 0 && 
         settings.rightBorder > 0 && 
         settings.bottomBorder > 0 && 
