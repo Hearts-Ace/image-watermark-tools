@@ -1,32 +1,36 @@
 import React from 'react';
+import { watermarkStyles } from '../watermarks/index.js';
+import SectionCard from './ui/SectionCard';
 
-function WatermarkStyles({ selectedStyle, setSelectedStyle }) {
-  // 水印风格选项
-  const styles = [
-    { id: 'default', name: '默认风格' },
-    { id: 'dualLine', name: '双行对齐风格' },
-  ];
-
+function WatermarkStyles({ selectedStyle, onStyleChange }) {
   return (
-    <div className="mb-6 bg-white p-4 rounded-lg shadow">
-      <h3 className="text-lg font-medium text-gray-800 mb-3">水印风格选择</h3>
-      <div className="flex flex-wrap gap-3">
-        {styles.map((style) => (
-          <button
-            key={style.id}
-            onClick={() => setSelectedStyle(style.id)}
-            className={`px-4 py-2 rounded ${
-              selectedStyle === style.id
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-200 text-gray-700'
-            }`}
-          >
-            {style.name}
-          </button>
-        ))}
+    <SectionCard title="水印风格" description="选择底部信息排版方式">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        {watermarkStyles.map((style) => {
+          const active = selectedStyle === style.id;
+          return (
+            <button
+              key={style.id}
+              type="button"
+              onClick={() => onStyleChange(style.id)}
+              className={`rounded-xl border px-4 py-3 text-left transition-all ${
+                active
+                  ? 'border-accent bg-accent-muted shadow-glow'
+                  : 'border-zinc-200 bg-zinc-50 hover:border-zinc-300 hover:bg-white'
+              }`}
+            >
+              <p className={`text-sm font-semibold ${active ? 'text-accent' : 'text-zinc-800'}`}>
+                {style.name}
+              </p>
+              <p className="mt-0.5 text-xs text-zinc-400">
+                {style.id === 'default' ? '单行居中 Logo' : '双行 + 竖线分隔'}
+              </p>
+            </button>
+          );
+        })}
       </div>
-    </div>
+    </SectionCard>
   );
 }
 
-export default WatermarkStyles; 
+export default WatermarkStyles;

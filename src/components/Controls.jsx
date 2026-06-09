@@ -1,31 +1,35 @@
-// src/components/Controls.jsx
 import React from 'react';
+import { BRANDS } from '../constants/brands.js';
+import { clearCameraInfoCache } from '../utils/storage.js';
+import { getExtraFieldsForStyle } from '../watermarks/index.js';
+import RangeSlider from './ui/RangeSlider';
+import SectionCard from './ui/SectionCard';
+import Switch from './ui/Switch';
 
-function Controls({ settings, setSettings }) {
+const BORDER_FIELDS = [
+  { field: 'topBorder', label: '上边框', max: 100 },
+  { field: 'rightBorder', label: '右边框', max: 100 },
+  { field: 'bottomBorder', label: '下边框', max: 200 },
+  { field: 'leftBorder', label: '左边框', max: 100 },
+];
+
+function Controls({ settings, setSettings, activeSection }) {
   const handleChange = (field, value) => {
-    setSettings(prev => ({
+    setSettings((prev) => ({
       ...prev,
-      [field]: parseInt(value, 10)
+      [field]: parseInt(value, 10),
     }));
   };
 
   const handleTextChange = (field, value) => {
-    setSettings(prev => ({
+    setSettings((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 
-  const handleBrandChange = (brand) => {
-    setSettings(prev => ({
-      ...prev,
-      selectedBrand: brand
-    }));
-  };
-
-  // 重置相机信息
   const resetCameraInfo = () => {
-    setSettings(prev => ({
+    setSettings((prev) => ({
       ...prev,
       cameraModel: '',
       lensModel: '',
@@ -33,231 +37,170 @@ function Controls({ settings, setSettings }) {
       aperture: '',
       shutterSpeed: '',
       iso: '',
-      customDate: ''
+      customDate: '',
     }));
-    
-    // 清除localStorage中的缓存
-    try {
-      localStorage.removeItem('photoEditorCameraInfo');
-    } catch (error) {
-      console.error('Error clearing camera info cache:', error);
-    }
+    clearCameraInfoCache();
   };
 
-  return (
-    <div className="space-y-6">
-      <h3 className="font-medium text-gray-800">Border Settings</h3>
-      
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700">Top Border</label>
-        <input
-          type="range"
-          min="0"
-          max="100"
-          value={settings.topBorder}
-          onChange={(e) => handleChange('topBorder', e.target.value)}
-          className="w-full"
-        />
-        <span className="text-sm text-gray-500">{settings.topBorder}px</span>
-      </div>
-      
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700">Right Border</label>
-        <input
-          type="range"
-          min="0"
-          max="100"
-          value={settings.rightBorder}
-          onChange={(e) => handleChange('rightBorder', e.target.value)}
-          className="w-full"
-        />
-        <span className="text-sm text-gray-500">{settings.rightBorder}px</span>
-      </div>
-      
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700">Bottom Border</label>
-        <input
-          type="range"
-          min="0"
-          max="200"
-          value={settings.bottomBorder}
-          onChange={(e) => handleChange('bottomBorder', e.target.value)}
-          className="w-full"
-        />
-        <span className="text-sm text-gray-500">{settings.bottomBorder}px</span>
-      </div>
-      
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700">Left Border</label>
-        <input
-          type="range"
-          min="0"
-          max="100"
-          value={settings.leftBorder}
-          onChange={(e) => handleChange('leftBorder', e.target.value)}
-          className="w-full"
-        />
-        <span className="text-sm text-gray-500">{settings.leftBorder}px</span>
-      </div>
-      
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700">Border Radius</label>
-        <input
-          type="range"
-          min="0"
-          max="50"
-          value={settings.borderRadius}
-          onChange={(e) => handleChange('borderRadius', e.target.value)}
-          className="w-full"
-        />
-        <span className="text-sm text-gray-500">{settings.borderRadius}px</span>
-      </div>
-      
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700">图片旋转</label>
-        <input
-          type="range"
-          min="-45"
-          max="45"
-          value={settings.rotationAngle || 0}
-          onChange={(e) => handleChange('rotationAngle', e.target.value)}
-          className="w-full"
-        />
-        <span className="text-sm text-gray-500">{settings.rotationAngle || 0}°</span>
-      </div>
+  const extraFields = getExtraFieldsForStyle(settings.watermarkStyle);
 
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">照片阴影</label>
-        <button
-          onClick={() => setSettings(prev => ({ ...prev, showPhotoShadow: !prev.showPhotoShadow }))}
-          className={`px-4 py-2 rounded text-sm ${
-            settings.showPhotoShadow
-              ? 'bg-blue-500 text-white'
-              : 'bg-gray-200 text-gray-700'
-          }`}
-        >
-          {settings.showPhotoShadow ? '已开启' : '已关闭'}
-        </button>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Brand Logo</label>
-        <div className="flex gap-4">
-          {['sony', 'fuji', 'canon', 'nikon', 'gmaster', 'sigma'].map((brand) => (
-            <button
-              key={brand}
-              onClick={() => handleBrandChange(brand)}
-              className={`px-4 py-2 rounded ${
-                settings.selectedBrand === brand
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-gray-200 text-gray-700'
-              }`}
-            >
-              {brand.charAt(0).toUpperCase() + brand.slice(1)}
-            </button>
-          ))}
+  if (activeSection === 'style') {
+    return (
+      <SectionCard title="品牌 Logo" description="选择相机品牌标识">
+        <div className="grid grid-cols-3 gap-2">
+          {BRANDS.map((brand) => {
+            const active = settings.selectedBrand === brand.id;
+            return (
+              <button
+                key={brand.id}
+                type="button"
+                onClick={() => setSettings((prev) => ({ ...prev, selectedBrand: brand.id }))}
+                className={`rounded-lg border px-2 py-2.5 text-xs font-semibold transition-all ${
+                  active
+                    ? 'border-accent bg-accent-muted text-accent shadow-sm'
+                    : 'border-zinc-200 bg-zinc-50 text-zinc-600 hover:border-zinc-300'
+                }`}
+              >
+                {brand.label}
+              </button>
+            );
+          })}
         </div>
-      </div>
+      </SectionCard>
+    );
+  }
 
-      <div className="border-t pt-4 mt-4">
-        <div className="flex justify-between items-center mb-2">
-          <h3 className="font-medium text-gray-800">相机信息设置</h3>
-          <button 
+  if (activeSection === 'border') {
+    return (
+      <div className="space-y-4">
+        <SectionCard title="边框尺寸" description="单位：像素（预览时自动缩放）">
+          <div className="space-y-4">
+            {BORDER_FIELDS.map(({ field, label, max }) => (
+              <RangeSlider
+                key={field}
+                label={label}
+                value={settings[field]}
+                min={0}
+                max={max}
+                step={1}
+                onChange={(value) => handleChange(field, value)}
+                formatValue={(value) => `${value}px`}
+              />
+            ))}
+            <RangeSlider
+              label="圆角"
+              value={settings.borderRadius}
+              min={0}
+              max={50}
+              step={1}
+              onChange={(value) => handleChange('borderRadius', value)}
+              formatValue={(value) => `${value}px`}
+            />
+          </div>
+        </SectionCard>
+
+        <SectionCard title="变换与效果">
+          <div className="space-y-4">
+            <RangeSlider
+              label="图片旋转"
+              value={settings.rotationAngle || 0}
+              min={-45}
+              max={45}
+              step={1}
+              onChange={(value) => handleChange('rotationAngle', value)}
+              formatValue={(value) => `${value}°`}
+            />
+            <Switch
+              label="照片阴影"
+              description="为照片添加柔和投影"
+              checked={settings.showPhotoShadow}
+              onChange={(value) => setSettings((prev) => ({ ...prev, showPhotoShadow: value }))}
+            />
+          </div>
+        </SectionCard>
+      </div>
+    );
+  }
+
+  if (activeSection === 'info') {
+    return (
+      <SectionCard
+        title="拍摄参数"
+        description="自动读取 EXIF，也可手动修改"
+        action={
+          <button
+            type="button"
             onClick={resetCameraInfo}
-            className="text-sm text-red-500 hover:text-red-700"
+            className="text-xs font-medium text-red-500 hover:text-red-600"
           >
-            重置信息
+            重置
           </button>
-        </div>
-        
-        <div className="mb-3">
-          <label className="block text-sm font-medium text-gray-700">相机型号</label>
-          <input
-            type="text"
-            value={settings.cameraModel}
-            onChange={(e) => handleTextChange('cameraModel', e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
-            placeholder="例如: Sony A7IV"
-          />
-        </div>
-        
-        {/* 镜头型号输入框 - 仅在双行水印模式下显示 */}
-        {settings.watermarkStyle === 'dualLine' && (
-          <div className="mb-3">
-            <label className="block text-sm font-medium text-gray-700">镜头型号</label>
-            <input
-              type="text"
-              value={settings.lensModel}
-              onChange={(e) => handleTextChange('lensModel', e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
-              placeholder="例如: FE 35mm F1.8"
-            />
-          </div>
-        )}
-        
-        {/* 自定义日期输入框 - 仅在双行水印模式下显示 */}
-        {settings.watermarkStyle === 'dualLine' && (
-          <div className="mb-3">
-            <label className="block text-sm font-medium text-gray-700">自定义日期</label>
-            <input
-              type="text"
-              value={settings.customDate}
-              onChange={(e) => handleTextChange('customDate', e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
-              placeholder="例如: 2023年12月31日"
-            />
-            <p className="text-xs text-gray-500 mt-1">留空则显示当前日期</p>
-          </div>
-        )}
-        
-        <div className="grid grid-cols-2 gap-3">
+        }
+      >
+        <div className="space-y-3">
           <div>
-            <label className="block text-sm font-medium text-gray-700">焦距 (mm)</label>
+            <label className="mb-1.5 block text-xs font-medium text-zinc-500">相机型号</label>
             <input
               type="text"
-              value={settings.focalLength}
-              onChange={(e) => handleTextChange('focalLength', e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
-              placeholder="例如: 50"
+              value={settings.cameraModel}
+              onChange={(e) => handleTextChange('cameraModel', e.target.value)}
+              className="input-field"
+              placeholder="例如: Sony A7IV"
             />
           </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700">光圈</label>
-            <input
-              type="text"
-              value={settings.aperture}
-              onChange={(e) => handleTextChange('aperture', e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
-              placeholder="例如: 1.8"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700">快门速度</label>
-            <input
-              type="text"
-              value={settings.shutterSpeed}
-              onChange={(e) => handleTextChange('shutterSpeed', e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
-              placeholder="例如: 125"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700">ISO</label>
-            <input
-              type="text"
-              value={settings.iso}
-              onChange={(e) => handleTextChange('iso', e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
-              placeholder="例如: 100"
-            />
+
+          {extraFields.includes('lensModel') && (
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-zinc-500">镜头型号</label>
+              <input
+                type="text"
+                value={settings.lensModel}
+                onChange={(e) => handleTextChange('lensModel', e.target.value)}
+                className="input-field"
+                placeholder="例如: FE 35mm F1.8"
+              />
+            </div>
+          )}
+
+          {extraFields.includes('customDate') && (
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-zinc-500">自定义日期</label>
+              <input
+                type="text"
+                value={settings.customDate}
+                onChange={(e) => handleTextChange('customDate', e.target.value)}
+                className="input-field"
+                placeholder="例如: 2023年12月31日"
+              />
+              <p className="mt-1 text-xs text-zinc-400">留空则显示当前日期</p>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { field: 'focalLength', label: '焦距 (mm)', placeholder: '50' },
+              { field: 'aperture', label: '光圈', placeholder: '1.8' },
+              { field: 'shutterSpeed', label: '快门速度', placeholder: '125' },
+              { field: 'iso', label: 'ISO', placeholder: '100' },
+            ].map(({ field, label, placeholder }) => (
+              <div key={field}>
+                <label className="mb-1.5 block text-xs font-medium text-zinc-500">{label}</label>
+                <input
+                  type="text"
+                  value={settings[field]}
+                  onChange={(e) => handleTextChange(field, e.target.value)}
+                  className="input-field"
+                  placeholder={placeholder}
+                />
+              </div>
+            ))}
           </div>
         </div>
-      </div>
-    </div>
-  );
+      </SectionCard>
+    );
+  }
+
+  return null;
 }
 
 export default Controls;
