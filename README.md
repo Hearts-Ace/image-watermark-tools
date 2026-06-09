@@ -1,125 +1,165 @@
-# 图片水印工具 (Image Watermark Tools)
+# Photo Watermark Tools
 
-一个功能强大的在线图片编辑工具，专为摄影师和图像处理需求打造。支持照片水印添加、镜头测试和图像质量检测等多种功能。
+面向摄影师的在线照片边框与水印工具。在浏览器中完成 EXIF 读取、实时预览、高分辨率导出，无需安装桌面软件。
 
-## ✨ 主要功能
+## 功能概览
 
-### 📷 照片水印编辑器
-- **智能水印添加**：为照片添加专业的相机品牌水印和拍摄参数
-- **EXIF数据提取**：自动读取照片的拍摄参数（快门、光圈、ISO、焦距等）
-- **多品牌支持**：支持Sony、Canon、Nikon等主流相机品牌
-- **边框定制**：可调节上下左右边框大小和圆角
-- **多种输出格式**：支持PNG（无损）和JPEG格式导出
-- **分辨率选择**：原始尺寸、高清(2400px)、中等(1800px)、低(1200px)
-- **大小调节**：Logo和文字大小可自由调节(50%-200%)
-- **参数缓存**：自动保存相机信息和设置参数
+### 照片水印编辑器
 
-### 🔍 镜头测试工具
-- **焦外测试**：检测镜头焦外成像质量和虚化效果
-- **畸变检测**：使用测试网格检测镜头几何畸变
+- **边框定制** — 独立调节上 / 右 / 下 / 左边距、圆角、旋转角度（±45°）
+- **品牌水印** — 支持 Sony、Fuji、Canon、Nikon、Gmaster、Sigma
+- **水印模板** — 默认单行居中、双行对齐（含竖线分隔）两种风格，可扩展
+- **EXIF 自动填充** — 读取相机型号、镜头、焦距、光圈、快门、ISO
+- **照片效果** — 可选柔和阴影；可选中部采样色彩条（5 色）
+- **灵活导出** — PNG 无损 / JPEG 可调质量；分辨率可选原始 / 9000px / 5000px / 3000px
+- **参数记忆** — 相机信息与编辑设置自动缓存至 localStorage
 
-### 💡 智能特性
-- **参数缓存**：自动记住常用的相机型号和拍摄参数
-- **批量处理优化**：支持大尺寸图像的高效处理
-- **实时预览**：即时预览编辑效果
-- **响应式设计**：适配桌面和移动设备
+### 镜头焦外测试
 
-## 🎯 适用场景
+全屏彩色圆点测试图，用于评估镜头虚化与焦外表现。支持规律 / 随机排列、密度与颜色模式调节，可下载测试图案。
 
-- 摄影师作品后期处理
-- 相机和镜头测试评估
-- 照片分享和展示
-- 摄影教学和演示
-- 器材评测和对比
+## 技术栈
 
-## 🛠️ 技术架构
+| 类别 | 技术 |
+|------|------|
+| 框架 | React 18 + Vite 5 |
+| 样式 | Tailwind CSS 3 |
+| 图像 | Canvas 2D API |
+| 元数据 | exif-js |
+| 大图加载 | createImageBitmap（不支持时回退至 Image） |
+
+## 项目结构
 
 ```
-├── src/
-│   ├── App.jsx                    # 主应用组件
-│   ├── components/
-│   │   ├── Controls.jsx           # 控制面板组件
-│   │   ├── WatermarkStyles.jsx    # 水印样式组件
-│   │   ├── BokehTest.jsx          # 焦外测试组件
-│   │   ├── DistortionTestGrid.jsx # 畸变检测组件
-│   │   └── ...                    # 其他组件
-│   ├── utils/
-│   │   └── ImageProcessor.js      # 图像处理工具
-│   ├── main.jsx                   # 应用入口
-│   └── index.css                  # 全局样式
-├── public/                        # 静态资源
-├── index.html                     # HTML模板
-├── package.json                   # 项目配置
-└── README.md                      # 项目文档
+src/
+├── App.jsx                     # 路由：水印编辑器 / 焦外测试
+├── components/
+│   ├── EditorPage.jsx          # 编辑器布局（侧栏 + 预览）
+│   ├── EditorPreview.jsx       # 实时预览区
+│   ├── ImageUpload.jsx         # 上传（点击 / 拖拽）
+│   ├── Controls.jsx            # 边框 / 品牌 / 参数面板
+│   ├── ExportSettings.jsx      # 导出设置
+│   ├── WatermarkStyles.jsx     # 水印风格选择
+│   ├── BokehTest.jsx           # 焦外测试页
+│   └── ui/                     # 通用 UI 组件
+├── constants/
+│   ├── settings.js             # 默认值、分辨率预设、缓存字段
+│   └── brands.js               # 品牌 Logo 配置
+├── hooks/
+│   ├── useEditorSettings.js    # 设置状态 + 持久化
+│   └── useImageUpload.js       # 图片加载 + EXIF 解析
+├── watermarks/                 # 水印模板 registry（可插拔）
+│   ├── index.js
+│   ├── default.js
+│   ├── dualLine.js
+│   └── shared.js
+└── utils/
+    ├── ImageProcessor.js       # 渲染编排（预览 / 导出）
+    ├── imageLoader.js
+    ├── exifParser.js
+    ├── storage.js
+    └── canvas/                 # 照片绘制、色彩条、Canvas 工具
 ```
 
-## 🚀 快速开始
+## 快速开始
 
-### 安装依赖
 ```bash
+# 安装依赖
 pnpm install
-```
 
-### 启动开发服务器
-```bash
+# 开发
 pnpm run dev
-```
 
-### 代码检查
-```bash
+# 代码检查
 pnpm run lint
-```
 
-### 构建生产版本
-```bash
+# 构建
 pnpm run build
+
+# 预览构建产物
+pnpm run preview
 ```
 
-## 🔧 核心依赖
+## 使用说明
 
-- **React 18** - 现代化前端框架
-- **Vite** - 快速构建工具
-- **TailwindCSS** - 实用优先的CSS框架
-- **Material-UI** - React UI组件库
-- **EXIF.js** - 图片EXIF数据提取
-- **Canvas API** - 图像处理和渲染
+### 水印编辑
 
-## 📖 使用说明
+1. 在左侧上传区点击或拖拽照片（JPG / PNG / WebP）
+2. 系统自动读取 EXIF 并填充拍摄参数
+3. 通过 Tab 切换面板：
+   - **样式** — 水印风格、品牌 Logo
+   - **边框** — 边距、圆角、旋转、阴影
+   - **参数** — 相机 / 镜头 / 拍摄信息
+   - **导出** — 分辨率、格式、色彩条、下载
+4. 右侧实时预览效果
+5. 点击「下载图片」导出
 
-### 照片水印编辑
-1. 点击"照片水印编辑器"标签
-2. 上传需要处理的照片
-3. 系统自动提取EXIF信息并填充拍摄参数
-4. 调整边框大小、Logo和文字尺寸
-5. 选择输出格式和分辨率
-6. 点击"下载图片"保存处理结果
+### 焦外测试
 
-### 镜头测试
-1. 选择对应的测试模式：
-   - **焦外测试**：用于评估镜头虚化质量
-   - **畸变检测**：检测镜头几何失真
-2. 按照屏幕提示进行测试
-3. 根据测试结果评估镜头性能
+1. 顶部导航切换至「焦外测试」
+2. 将测试图全屏显示在镜头前拍摄
+3. 对比不同光圈、焦距下的虚化效果
+4. 按 `H` 隐藏 / 显示控制面板，按 `ESC` 返回编辑器
 
-## 🎨 自定义配置
+## 渲染机制
 
-- 支持多种水印样式选择
-- 可调节的边框和圆角参数
-- 灵活的输出分辨率设置
-- 个性化的Logo和文字大小
-- 自动保存的用户偏好设置
+预览与导出采用**双通道**设计，互不影响：
 
-## ⚡ 性能优化
+| | 预览 | 导出 |
+|---|------|------|
+| Canvas | 页面可见 canvas | 离屏 canvas（`document.createElement`） |
+| 最大宽度 | 1800px（保证流畅） | 按「输出分辨率」设置 |
+| 像素比 | 跟随 `devicePixelRatio` | 固定 1:1，不受浏览器缩放影响 |
+| 输出方式 | 仅显示 | `toBlob` 下载 |
 
-- 使用`createImageBitmap` API处理大尺寸图像
-- 智能的参数缓存机制
-- 高效的Canvas渲染优化
-- 响应式的用户界面设计
+## 扩展水印模板
 
-## 🤝 贡献指南
+在 `src/watermarks/` 下新建模板文件并注册：
 
-欢迎提交Issue和Pull Request来改进这个项目！
+```javascript
+// src/watermarks/minimal.js
+export default {
+  id: 'minimal',
+  name: '极简风格',
+  extraFields: [],          // Controls 面板额外显示的字段
+  draw(ctx, { settings, exifData, layout }) {
+    // 绘制逻辑，返回 Promise
+    return Promise.resolve();
+  },
+};
+```
 
-## 📄 开源协议
+```javascript
+// src/watermarks/index.js
+import minimal from './minimal.js';
 
-本项目采用MIT协议开源。
+export const watermarkStyles = [defaultWatermark, dualLineWatermark, minimal];
+```
+
+UI 会自动读取 registry 展示新选项，无需修改 `ImageProcessor`。
+
+## 支持的品牌
+
+| 品牌 | ID |
+|------|-----|
+| Sony | `sony` |
+| Fuji | `fuji` |
+| Canon | `canon` |
+| Nikon | `nikon` |
+| Gmaster | `gmaster` |
+| Sigma | `sigma` |
+
+品牌 Logo 与默认缩放比例在 `src/constants/brands.js` 中配置。
+
+## 导出分辨率
+
+| 选项 | 最大宽度 |
+|------|----------|
+| 原始尺寸 | 原图像素宽度 |
+| 高 | 9000px |
+| 中 | 5000px |
+| 低 | 3000px |
+
+## 许可
+
+MIT
