@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { loadImageFromFile } from '../utils/imageLoader.js';
 import {
   extractExifFromFile,
-  extractExifFromImage,
   mapExifToCameraSettings,
 } from '../utils/exifParser.js';
 
@@ -27,9 +26,7 @@ export const useImageUpload = (setSettings) => {
       setImage(loadedImage);
       setOriginalImageDimensions(dimensions);
 
-      const exif = loadedImage instanceof ImageBitmap
-        ? await extractExifFromFile(file)
-        : await extractExifFromImage(loadedImage);
+      const exif = await extractExifFromFile(file);
 
       setExifData(exif);
       applyExifToSettings(exif);
